@@ -1,0 +1,9 @@
+# Default gitleaks rules + this app's personal API tokens (src/utils/apiToken.ts).
+[extend]
+useDefault = true
+
+[[rules]]
+id = "finanzas-personal-api-token"
+description = "Finanzas personal API token (fpat_)"
+regex = '''fpat_[A-Za-z0-9_-]{43}'''
+keywords = ["fpat_"]

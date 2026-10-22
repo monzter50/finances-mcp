@@ -1,0 +1,52 @@
+{
+  "name": "finances-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for personal finance data",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "inspect": "pnpm dlx @modelcontextprotocol/inspector tsx src/index.ts",
+    "lint": "eslint src test",
+    "lint:fix": "eslint src test --fix"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/monzter50/finances-mcp.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/monzter50/finances-mcp/issues"
+  },
+  "homepage": "https://github.com/monzter50/finances-mcp#readme",
+  "dependencies": {
+    "@modelcontextprotocol/server": "^2.3.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "^2.3.1",
+    "@types/node": "^26.6.5",
+    "eslint": "^10.13.0",
+    "neostandard": "^0.14.1",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^4.1.12"
+  },
+  "bin": {
+    "finances-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20.12"
+  },
+  "packageManager": "pnpm@10.30.3"
+}
