@@ -10,11 +10,11 @@ A stdio MCP server that exposes the user's finances API (sibling repo `../api-ga
 
 Package manager is pnpm (pinned via `packageManager` in `package.json`); don't use npm or add a `package-lock.json`.
 
-- `pnpm dev`: run the server from source over stdio (tsx). Needs the env vars below.
+- `pnpm dev`: run the server from source over stdio (tsx) with `--env local` (`.env.local`); `pnpm dev --env staging` overrides it, since the last `--env` wins
 - `pnpm build`: compile `src/` to `dist/` (uses `tsconfig.build.json`)
 - `pnpm typecheck` / `pnpm lint` / `pnpm test`: the CI gates, along with `pnpm audit --prod --audit-level high` and gitleaks
 - Single test file: `pnpm vitest run test/read.test.ts`; single test by name: `pnpm vitest run -t "list_budgets"`
-- `pnpm inspect --env local`: MCP Inspector against the source server; `pnpm dev --env staging` works the same way
+- `pnpm inspect --env local`: MCP Inspector against the source server
 
 Required env (see `.env.example`), with no fallbacks; `loadConfig()` throws at startup if either is missing:
 - `FINANCES_API_URL`, e.g. `http://localhost:3000/api`. Must be https unless it points at localhost.

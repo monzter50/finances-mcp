@@ -4,7 +4,7 @@
   "description": "MCP server for personal finance data",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "dev": "tsx src/index.ts",
+    "dev": "tsx src/index.ts --env local",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

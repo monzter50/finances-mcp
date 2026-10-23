@@ -4,13 +4,20 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { loadConfig, resolveEnv } from '../src/config.js';
 
+// Built at runtime so gitleaks' fpat_ rule doesn't flag a literal fixture.
+const VALID_TOKEN = 'fpat_' + 'a'.repeat(43);
+
 describe('loadConfig', () => {
   it('throws without FINANCES_API_URL', () => {
-    expect(() => loadConfig({ FINANCES_API_TOKEN: 'fpat_x' })).toThrow('FINANCES_API_URL is required');
+    expect(() => loadConfig({ FINANCES_API_TOKEN: VALID_TOKEN })).toThrow('FINANCES_API_URL is required');
   });
 
   it('throws without FINANCES_API_TOKEN', () => {
     expect(() => loadConfig({ FINANCES_API_URL: 'http://localhost:3000/api' })).toThrow('FINANCES_API_TOKEN');
+  });
+
+  it('rejects the bare fpat_ placeholder', () => {
+    expect(() => loadConfig({ FINANCES_API_URL: 'http://localhost:3000/api', FINANCES_API_TOKEN: 'fpat_' })).toThrow('43 characters');
   });
 
   it('rejects a token that is not a personal API token', () => {
@@ -18,13 +25,13 @@ describe('loadConfig', () => {
   });
 
   it('trims trailing slashes from the URL', () => {
-    const cfg = loadConfig({ FINANCES_API_URL: ' http://localhost:3000/api// ', FINANCES_API_TOKEN: 'fpat_x' });
+    const cfg = loadConfig({ FINANCES_API_URL: ' http://localhost:3000/api// ', FINANCES_API_TOKEN: VALID_TOKEN });
     expect(cfg.apiUrl).toBe('http://localhost:3000/api');
   });
 });
 
 describe('loadConfig URL scheme', () => {
-  const token = { FINANCES_API_TOKEN: 'fpat_x' };
+  const token = { FINANCES_API_TOKEN: VALID_TOKEN };
 
   it('allows http for localhost', () => {
     expect(loadConfig({ ...token, FINANCES_API_URL: 'http://127.0.0.1:3000/api' }).apiUrl).toBe('http://127.0.0.1:3000/api');
@@ -59,6 +66,10 @@ describe('resolveEnv', () => {
     expect(env.FINANCES_API_URL).toBe('https://staging.example.com/api');
     expect(env.FINANCES_API_TOKEN).toBe('fpat_staging');
     expect(env.HOME).toBe('/h');
+  });
+
+  it('uses the last --env when repeated (pnpm dev --env staging overrides the default)', () => {
+    expect(resolveEnv(['--env', 'local', '--env', 'staging'], {}, root).FINANCES_API_TOKEN).toBe('fpat_staging');
   });
 
   it('throws when the env file is missing', () => {

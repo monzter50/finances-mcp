@@ -10,9 +10,12 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 export function loadConfig (env: NodeJS.ProcessEnv = process.env): Config {
   const apiUrl = env.FINANCES_API_URL?.trim();
-  const apiToken = env.FINANCES_API_TOKEN?.trim();
-  if (!apiUrl) throw new Error('FINANCES_API_URL is required (e.g. http://localhost:3000/api)');
-  if (!apiToken?.startsWith('fpat_')) throw new Error('FINANCES_API_TOKEN must be a personal API token (fpat_...)');
+  const apiToken = env.FINANCES_API_TOKEN?.trim() ?? '';
+  if (!apiUrl) throw new Error('FINANCES_API_URL is required (e.g. http://localhost:3000/api). Set it in the environment, or create .env.<name> from .env.example and pass --env <name>.');
+  // Same format as the API (src/utils/apiToken.ts) and the .gitleaks.toml rule.
+  if (!/^fpat_[A-Za-z0-9_-]{43}$/.test(apiToken)) {
+    throw new Error('FINANCES_API_TOKEN must be a full personal API token (fpat_ followed by 43 characters)');
+  }
 
   const url = new URL(apiUrl);
   const isLocal = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
