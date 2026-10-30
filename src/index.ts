@@ -5,6 +5,8 @@ import { loadConfig, resolveEnv } from './config.js';
 import { createApiClient } from './apiClient.js';
 import { createServer } from './server.js';
 
-const api = createApiClient(loadConfig(resolveEnv())); // fail fast on bad env
+const env = resolveEnv();
+const api = createApiClient(loadConfig(env)); // fail fast on bad env
+const enableWrites = env.FINANCES_MCP_ENABLE_WRITES === 'true';
 
-serveStdio(() => createServer(api));
+serveStdio(() => createServer(api, { enableWrites }));

@@ -2,7 +2,7 @@ import { Client } from '@modelcontextprotocol/client';
 import { InMemoryTransport } from '@modelcontextprotocol/server';
 import { vi } from 'vitest';
 import { createApiClient } from '../src/apiClient.js';
-import { createServer } from '../src/server.js';
+import { createServer, type ServerOptions } from '../src/server.js';
 
 export const TEST_CONFIG = { apiUrl: 'http://api.test/api', apiToken: 'fpat_test', timeoutMs: 1000 };
 
@@ -17,9 +17,9 @@ export function requestedUrl (fetchMock: ReturnType<typeof stubFetch>): URL {
   return fetchMock.mock.calls[0]![0];
 }
 
-export async function connectClient () {
+export async function connectClient (options: ServerOptions = {}) {
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  await createServer(createApiClient(TEST_CONFIG)).connect(serverTransport);
+  await createServer(createApiClient(TEST_CONFIG), options).connect(serverTransport);
   const client = new Client({ name: 'test-client', version: '0.0.0' });
   await client.connect(clientTransport);
   return client;
