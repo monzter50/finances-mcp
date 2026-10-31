@@ -31,6 +31,7 @@ TypeScript ESM on the v2 MCP SDK (`@modelcontextprotocol/server`, plus `@modelco
 - `src/apiClient.ts`: the only file that talks HTTP. It unwraps the API's `{ success, data, message, errorCode }` envelope and throws `ApiError(status, errorCode, message)` on `!res.ok` or `success: false`. Tools return the full envelope (including `pagination`).
 - `src/tools/result.ts`: `ok()` / `fail()`. `fail()` turns `ApiError` codes, 429s, timeouts and unreachable-API errors into messages the model can act on. Messages must never contain the token or the raw request.
 - `src/tools/read.ts`: the 9 read tools, each wrapped with `wrap()` so errors become `isError` results instead of throwing.
+- `src/tools/import.ts`: `check_screenshots` and `import_screenshots`, registered only when `FINANCES_MCP_ENABLE_WRITES=true` (read in `src/index.ts`, passed as `createServer(api, { enableWrites })`). They need a token with the `write` scope. The model does the OCR of the BBVA screenshots; the tools hash each image file themselves (`hashImage`: absolute path, image extension, ≤ 25 MB) and send only hashes and rows, never file contents.
 
 ## Rules when adding or changing tools
 
@@ -40,7 +41,8 @@ TypeScript ESM on the v2 MCP SDK (`@modelcontextprotocol/server`, plus `@modelco
 - Amounts are already decimals (the API converts from `amountCents`); never expose cents.
 - Keep `list_transactions`' default `limit` at 25 so responses don't flood the model's context.
 - stdout is the protocol channel: use `console.error` only. ESLint's `no-console` enforces this in `src/`.
-- Write tools (phase 2) are blocked until the API accepts an `Idempotency-Key` header on `POST /api/transactions`. When they're added, register them only when `FINANCES_MCP_ENABLE_WRITES=true`, send a fresh UUID key per call, annotate `{ readOnlyHint: false, destructiveHint: false, idempotentHint: true }`, and don't expose deletes.
+- Write tools register only when `FINANCES_MCP_ENABLE_WRITES=true`, are annotated `{ readOnlyHint: false, destructiveHint: false, idempotentHint: true }`, and never expose deletes.
+- `import_screenshots` is idempotent on the API side (`POST /transactions/import/screenshots`: image-hash skip + count reconciliation per fingerprint), so it needs no `Idempotency-Key`. A generic `create_transaction` tool is still blocked until `POST /api/transactions` accepts an `Idempotency-Key` header; when added, send a fresh UUID key per call.
 
 ## Conventions
 

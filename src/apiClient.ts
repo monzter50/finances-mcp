@@ -28,7 +28,10 @@ export function createApiClient (cfg: Config) {
     return json as T; // full envelope: { success, data, pagination?, message }
   }
 
-  return { get: async <T>(p: string, q?: Query) => await request<T>('GET', p, q) };
+  return {
+    get: async <T>(p: string, q?: Query) => await request<T>('GET', p, q),
+    post: async <T>(p: string, body: unknown) => await request<T>('POST', p, undefined, body)
+  };
 }
 
 export type ApiClient = ReturnType<typeof createApiClient>;
