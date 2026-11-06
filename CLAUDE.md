@@ -18,7 +18,7 @@ Package manager is pnpm (pinned via `packageManager` in `package.json`); don't u
 
 Required env (see `.env.example`), with no fallbacks; `loadConfig()` throws at startup if either is missing:
 - `FINANCES_API_URL`, e.g. `http://localhost:3000/api`. Must be https unless it points at localhost.
-- `FINANCES_API_TOKEN`, must start with `fpat_`
+- `FINANCES_API_TOKEN`, must start with `fpat_`. Or, on macOS, `FINANCES_API_TOKEN_KEYCHAIN=<service>` to read it from the login Keychain (`security add-generic-password -s <service> -a "$USER" -w`) so the token never sits in a file. Setting both is an error.
 
 Environments: `--env <name>` (`resolveEnv()` in `src/config.ts`) loads `.env.<name>` from the repo root, whatever the cwd. Values in that file override the process env, so an exported variable can't redirect the server to another environment. Without `--env`, only the process env is used. All `.env.*` files except `.env.example` are gitignored. Each environment is registered in Claude Code as its own server (e.g. `finances-local`, `finances-prod`).
 

@@ -30,6 +30,29 @@ describe('loadConfig', () => {
   });
 });
 
+describe('loadConfig with FINANCES_API_TOKEN_KEYCHAIN', () => {
+  const url = { FINANCES_API_URL: 'http://localhost:3000/api' };
+
+  it('reads the token from the named Keychain item', () => {
+    const services: string[] = [];
+    const cfg = loadConfig({ ...url, FINANCES_API_TOKEN_KEYCHAIN: 'finances-local' }, (s) => { services.push(s); return VALID_TOKEN + '\n'; });
+    expect(services).toEqual(['finances-local']);
+    expect(cfg.apiToken).toBe(VALID_TOKEN);
+  });
+
+  it('rejects setting both the token and the Keychain item', () => {
+    expect(() => loadConfig({ ...url, FINANCES_API_TOKEN: VALID_TOKEN, FINANCES_API_TOKEN_KEYCHAIN: 'finances-local' }, () => VALID_TOKEN)).toThrow('not both');
+  });
+
+  it('validates the Keychain value like a plain token', () => {
+    expect(() => loadConfig({ ...url, FINANCES_API_TOKEN_KEYCHAIN: 'finances-local' }, () => 'not-a-token')).toThrow('43 characters');
+  });
+
+  it('surfaces a missing Keychain item', () => {
+    expect(() => loadConfig({ ...url, FINANCES_API_TOKEN_KEYCHAIN: 'finances-local' }, () => { throw new Error('No Keychain item'); })).toThrow('No Keychain item');
+  });
+});
+
 describe('loadConfig URL scheme', () => {
   const token = { FINANCES_API_TOKEN: VALID_TOKEN };
 
