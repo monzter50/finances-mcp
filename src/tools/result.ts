@@ -1,8 +1,19 @@
 // Maps the API's error envelope to messages the model can act on.
 // Never include the token or the raw request in these messages.
 import { ApiError } from '../apiClient.js';
+import { LoginRequiredError, type SessionGate } from '../auth/session.js';
 
 export const ok = (data: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(data) }] });
+
+/** Runs a tool once the session is ready; errors become isError results instead of throwing. */
+export const wrapWith = (session: SessionGate) => <A>(fn: (a: A) => Promise<unknown>) => async (a: A) => {
+  try {
+    await session.require();
+    return ok(await fn(a));
+  } catch (e) {
+    return fail(session.check(e));
+  }
+};
 
 const RATE_LIMITED = 'The finances API rate limit was hit. Wait a few minutes before making more calls.';
 
@@ -14,7 +25,9 @@ const MESSAGES: Record<string, string> = {
 
 export function fail (err: unknown) {
   let text = 'Unexpected error calling the finances API.';
-  if (err instanceof ApiError) {
+  if (err instanceof LoginRequiredError) {
+    text = `${err.message} Ask the user to log in there (it opens in their browser), then retry.`;
+  } else if (err instanceof ApiError) {
     if (err.errorCode === 'INSUFFICIENT_SCOPE') {
       // The API names the missing scope ("read" or "write") in its message.
       text = `${err.message} Create a token with that scope in the app.`;

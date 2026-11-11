@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "inspect": "pnpm dlx @modelcontextprotocol/inspector tsx src/index.ts",
+    "inspect": "pnpm dlx @modelcontextprotocol/inspector --config inspector.config.json --server finances-local",
     "lint": "eslint src test",
     "lint:fix": "eslint src test --fix"
   },

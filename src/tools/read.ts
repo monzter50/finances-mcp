@@ -4,21 +4,16 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/server';
 import type { ApiClient } from '../apiClient.js';
-import { ok, fail } from './result.js';
+import type { SessionGate } from '../auth/session.js';
+import { wrapWith } from './result.js';
 
 const uuid = z.uuid();
 const year = z.number().int().min(2000).max(2100);
 const month = z.number().int().min(1).max(12);
 const RO = { readOnlyHint: true, openWorldHint: false };
-const wrap = <A>(fn: (a: A) => Promise<unknown>) => async (a: A) => {
-  try {
-    return ok(await fn(a));
-  } catch (e) {
-    return fail(e);
-  }
-};
 
-export function registerReadTools (server: McpServer, api: ApiClient) {
+export function registerReadTools (server: McpServer, api: ApiClient, session: SessionGate) {
+  const wrap = wrapWith(session);
   server.registerTool('list_accounts', {
     title: 'List accounts',
     description: 'List the user\'s accounts with current balances (decimal currency units).',

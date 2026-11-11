@@ -44,12 +44,18 @@ describe('loadConfig with FINANCES_API_TOKEN_KEYCHAIN', () => {
     expect(() => loadConfig({ ...url, FINANCES_API_TOKEN: VALID_TOKEN, FINANCES_API_TOKEN_KEYCHAIN: 'finances-local' }, () => VALID_TOKEN)).toThrow('not both');
   });
 
-  it('validates the Keychain value like a plain token', () => {
-    expect(() => loadConfig({ ...url, FINANCES_API_TOKEN_KEYCHAIN: 'finances-local' }, () => 'not-a-token')).toThrow('43 characters');
+  it('returns a null token for a malformed Keychain value, so the user logs in again', () => {
+    const cfg = loadConfig({ ...url, FINANCES_API_TOKEN_KEYCHAIN: 'finances-local' }, () => 'not-a-token');
+    expect(cfg.apiToken).toBeNull();
+    expect(cfg.keychainService).toBe('finances-local');
   });
 
-  it('surfaces a missing Keychain item', () => {
-    expect(() => loadConfig({ ...url, FINANCES_API_TOKEN_KEYCHAIN: 'finances-local' }, () => { throw new Error('No Keychain item'); })).toThrow('No Keychain item');
+  it('returns a null token when the Keychain item is missing', () => {
+    expect(loadConfig({ ...url, FINANCES_API_TOKEN_KEYCHAIN: 'finances-local' }, () => null).apiToken).toBeNull();
+  });
+
+  it('leaves keychainService unset in plain token mode', () => {
+    expect(loadConfig({ ...url, FINANCES_API_TOKEN: VALID_TOKEN }).keychainService).toBeUndefined();
   });
 });
 

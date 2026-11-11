@@ -14,11 +14,13 @@ Package manager is pnpm (pinned via `packageManager` in `package.json`); don't u
 - `pnpm build`: compile `src/` to `dist/` (uses `tsconfig.build.json`)
 - `pnpm typecheck` / `pnpm lint` / `pnpm test`: the CI gates, along with `pnpm audit --prod --audit-level high` and gitleaks
 - Single test file: `pnpm vitest run test/read.test.ts`; single test by name: `pnpm vitest run -t "list_budgets"`
-- `pnpm inspect --env local`: MCP Inspector against the source server
+- `pnpm inspect`: MCP Inspector against the source server, as `finances-local` from `inspector.config.json`. For another environment, add an entry there and run `pnpm dlx @modelcontextprotocol/inspector --config inspector.config.json --server <name>`
 
 Required env (see `.env.example`), with no fallbacks; `loadConfig()` throws at startup if either is missing:
 - `FINANCES_API_URL`, e.g. `http://localhost:3000/api`. Must be https unless it points at localhost.
-- `FINANCES_API_TOKEN`, must start with `fpat_`. Or, on macOS, `FINANCES_API_TOKEN_KEYCHAIN=<service>` to read it from the login Keychain (`security add-generic-password -s <service> -a "$USER" -w`) so the token never sits in a file. Setting both is an error.
+- `FINANCES_API_TOKEN_KEYCHAIN=<service>` (macOS, recommended) or `FINANCES_API_TOKEN` (must be `fpat_` + 43 characters). Setting both is an error.
+
+Keychain mode logs in from the browser (`src/auth/`). At startup the session checks the Keychain token with `GET /auth/me`. With no token, a malformed one, or a 401, it serves a login form on `127.0.0.1:<random port>/login/<random nonce>` and runs `open` on it. Submitting the form calls `POST /auth/login`, revokes this machine's previous token (same name, `mcp-<env>-<hostname>`), creates a new one (scopes `read`, plus `write` with `FINANCES_MCP_ENABLE_WRITES`, 90 days), writes it to the Keychain through `security -i` on stdin (never argv), and logs the JWT out because the API allows one active session per user. Until then tools return a "Not logged in" result with the URL; an `INVALID_TOKEN` mid-session reopens the page. Token mode never logs in.
 
 Environments: `--env <name>` (`resolveEnv()` in `src/config.ts`) loads `.env.<name>` from the repo root, whatever the cwd. Values in that file override the process env, so an exported variable can't redirect the server to another environment. Without `--env`, only the process env is used. All `.env.*` files except `.env.example` are gitignored. Each environment is registered in Claude Code as its own server (e.g. `finances-local`, `finances-prod`).
 
@@ -26,10 +28,12 @@ Environments: `--env <name>` (`resolveEnv()` in `src/config.ts`) loads `.env.<na
 
 TypeScript ESM on the v2 MCP SDK (`@modelcontextprotocol/server`, plus `@modelcontextprotocol/client` for tests only) with zod 4.
 
-- `src/index.ts`: entry and `bin`. Builds one API client from `loadConfig()`, then `serveStdio(() => createServer(api))`.
+- `src/index.ts`: entry and `bin`. Builds one API client from `loadConfig()` (plus a session in Keychain mode), then `serveStdio(() => createServer(api, { enableWrites, session }))` and starts the session check in the background.
+- `src/auth/session.ts`: `createSession()` and the `SessionGate` the tools use (`require()` before the API, `check()` on errors). `createServer` without a session uses `OPEN_GATE`, which is what the tests get.
+- `src/auth/loginServer.ts`: the login page. It accepts only its own `Host` and `Origin`, sets a strict CSP and `no-store`, and closes after a login or 15 minutes idle. Never log the password or the token there.
 - `src/server.ts`: `createServer(api)` registers all tools. It's transport-agnostic so tests can connect it over `InMemoryTransport`.
 - `src/apiClient.ts`: the only file that talks HTTP. It unwraps the API's `{ success, data, message, errorCode }` envelope and throws `ApiError(status, errorCode, message)` on `!res.ok` or `success: false`. Tools return the full envelope (including `pagination`).
-- `src/tools/result.ts`: `ok()` / `fail()`. `fail()` turns `ApiError` codes, 429s, timeouts and unreachable-API errors into messages the model can act on. Messages must never contain the token or the raw request.
+- `src/tools/result.ts`: `ok()` / `fail()` / `wrapWith(session)`. `fail()` turns `LoginRequiredError`, `ApiError` codes, 429s, timeouts and unreachable-API errors into messages the model can act on. Messages must never contain the token or the raw request.
 - `src/tools/read.ts`: the 9 read tools, each wrapped with `wrap()` so errors become `isError` results instead of throwing.
 - `src/tools/import.ts`: `check_screenshots` and `import_screenshots`, registered only when `FINANCES_MCP_ENABLE_WRITES=true` (read in `src/index.ts`, passed as `createServer(api, { enableWrites })`). They need a token with the `write` scope. The model does the OCR of the BBVA screenshots; the tools hash each image file themselves (`hashImage`: absolute path, image extension, ≤ 25 MB) and send only hashes and rows, never file contents.
 
