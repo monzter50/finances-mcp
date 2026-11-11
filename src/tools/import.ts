@@ -14,6 +14,7 @@ import { extname, isAbsolute } from 'node:path';
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/server';
 import type { ApiClient } from '../apiClient.js';
+import type { SessionGate } from '../auth/session.js';
 import { ok, fail } from './result.js';
 
 // Mirror the API validator (screenshotImport.validator.ts).
@@ -57,7 +58,7 @@ const failFile = (e: unknown) => e instanceof ScreenshotFileError
   ? { isError: true, content: [{ type: 'text' as const, text: e.message }] }
   : fail(e);
 
-export function registerImportTools (server: McpServer, api: ApiClient) {
+export function registerImportTools (server: McpServer, api: ApiClient, session: SessionGate) {
   server.registerTool('check_screenshots', {
     title: 'Check screenshots',
     description:
@@ -67,6 +68,7 @@ export function registerImportTools (server: McpServer, api: ApiClient) {
     annotations: { readOnlyHint: true, openWorldHint: false }
   }, async ({ paths }) => {
     try {
+      await session.require();
       const hashed = await Promise.all(paths.map(async (path) => ({ path, sha256: await hashImage(path) })));
       const res = await api.post<{ data: { imported: string[] } }>(
         '/transactions/import/screenshots/check',
@@ -75,7 +77,7 @@ export function registerImportTools (server: McpServer, api: ApiClient) {
       const imported = new Set(res.data.imported);
       return ok(hashed.map(({ path, sha256 }) => ({ path, alreadyImported: imported.has(sha256) })));
     } catch (e) {
-      return failFile(e);
+      return failFile(session.check(e));
     }
   });
 
@@ -98,10 +100,11 @@ export function registerImportTools (server: McpServer, api: ApiClient) {
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false }
   }, async ({ accountId, images }) => {
     try {
+      await session.require();
       const withHashes = await Promise.all(images.map(async (image) => ({ sha256: await hashImage(image.path), rows: image.rows })));
       return ok(await api.post('/transactions/import/screenshots', { accountId, images: withHashes }));
     } catch (e) {
-      return failFile(e);
+      return failFile(session.check(e));
     }
   });
 }
